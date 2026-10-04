@@ -11,8 +11,6 @@ const app = express();
 // MIDDLEWARE
 // ==========================================
 
-const cors = require("cors");
-
 app.use(
   cors({
     origin: "*",
@@ -20,6 +18,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
 app.use(express.json());
 
 // ==========================================
@@ -80,6 +79,11 @@ async function getShopCashfreeConfig(shopId) {
   if (!shop.cashfree_secret_key) {
     throw new Error("Cashfree Secret Key is not configured for this shop.");
   }
+
+  // ==========================================
+  // IMPORTANT:
+  // Environment comes from shops.cashfree_env
+  // ==========================================
 
   const environment = String(shop.cashfree_env || "SANDBOX").toUpperCase();
 
@@ -207,7 +211,7 @@ app.post("/api/payment/create", async (req, res) => {
       customer_details: {
         customer_id: `CUST_${shopId}_${Date.now()}`,
 
-        customer_phone: String(customerPhone) || shop.whatsapp_number,
+        customer_phone: customerPhone || shop.whatsapp_number,
 
         customer_name: customerName || "Quick2Print Customer",
       },
@@ -223,6 +227,11 @@ app.post("/api/payment/create", async (req, res) => {
     // --------------------------------------
     // CREATE CASHFREE ORDER
     // --------------------------------------
+
+    console.log("Creating Cashfree order...");
+    console.log("Shop:", shopId);
+    console.log("Environment:", environment);
+    console.log("Amount:", amount);
 
     const cfResponse = await axios.post(`${apiUrl}/orders`, payload, {
       headers,
@@ -325,7 +334,7 @@ app.post("/api/payment/verify", async (req, res) => {
       });
     }
 
-    console.log(`🔍 Verifying order: ${orderId}`);
+    console.log(`Verifying order: ${orderId}`);
 
     // --------------------------------------
     // GET SHOP CASHFREE CONFIG
@@ -373,7 +382,6 @@ app.post("/api/payment/verify", async (req, res) => {
 
     const response = await axios.get(
       `${apiUrl}/orders/${encodeURIComponent(localOrder.payment_order_id)}`,
-
       {
         headers,
       },
@@ -398,7 +406,6 @@ app.post("/api/payment/verify", async (req, res) => {
         `${apiUrl}/orders/${encodeURIComponent(
           localOrder.payment_order_id,
         )}/payments`,
-
         {
           headers,
         },
@@ -525,15 +532,10 @@ app.post("/api/payment/verify", async (req, res) => {
     }
 
     const { data: updatedOrder, error: updateError } = await supabase
-
       .from("print_orders")
-
       .update(updateData)
-
       .eq("order_id", orderId)
-
       .eq("shop_id", shopId)
-
       .select(
         `
         order_id,
@@ -548,11 +550,9 @@ app.post("/api/payment/verify", async (req, res) => {
         payment_completed_at,
         payment_verified_at,
         transaction_reference,
-        payment_error_message,
-        
+        payment_error_message
       `,
       )
-
       .single();
 
     if (updateError) {
@@ -568,15 +568,11 @@ app.post("/api/payment/verify", async (req, res) => {
 
     if (dbStatus === "PAID") {
       const { error: processingError } = await supabase
-
         .from("print_orders")
-
         .update({
           status: "processing",
         })
-
         .eq("order_id", orderId)
-
         .eq("shop_id", shopId);
 
       if (processingError) {
@@ -652,9 +648,7 @@ app.get("/api/payment/order/:orderId", async (req, res) => {
     }
 
     const { data, error } = await supabase
-
       .from("print_orders")
-
       .select(
         `
           order_id,
@@ -676,28 +670,22 @@ app.get("/api/payment/order/:orderId", async (req, res) => {
           payment_completed_at,
           payment_verified_at,
           transaction_reference,
-          payment_error_message,
-          payment_environment
+          payment_error_message
         `,
       )
-
       .eq("order_id", orderId)
-
       .eq("shop_id", shopId)
-
       .single();
 
     if (error || !data) {
       return res.status(404).json({
         success: false,
-
         message: "Payment order not found.",
       });
     }
 
     return res.status(200).json({
       success: true,
-
       order: data,
     });
   } catch (error) {
@@ -705,7 +693,6 @@ app.get("/api/payment/order/:orderId", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Failed to get payment order.",
     });
   }
@@ -718,9 +705,7 @@ app.get("/api/payment/order/:orderId", async (req, res) => {
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
-
     message: "Quick2Print Payment Server is running.",
-
     time: new Date().toISOString(),
   });
 });
@@ -732,5 +717,5 @@ app.get("/api/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Quick2Print Payment Server running on port ${PORT}`);
+  console.log(`Quick2Print Payment Server running on port ${PORT}`);
 });
