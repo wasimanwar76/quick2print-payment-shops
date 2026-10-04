@@ -16,7 +16,7 @@ app.use(
     origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  }),
+  })
 );
 
 app.use(express.json());
@@ -46,8 +46,7 @@ async function getShopCashfreeConfig(shopId) {
 
   const { data: shop, error } = await supabase
     .from("shops")
-    .select(
-      `
+    .select(`
       shop_id,
       shop_name,
       status,
@@ -55,13 +54,14 @@ async function getShopCashfreeConfig(shopId) {
       cashfree_app_id,
       cashfree_secret_key,
       cashfree_env
-    `,
-    )
+    `)
     .eq("shop_id", shopId)
     .single();
 
   if (error) {
-    throw new Error(`Failed to get shop configuration: ${error.message}`);
+    throw new Error(
+      `Failed to get shop configuration: ${error.message}`
+    );
   }
 
   if (!shop) {
@@ -73,11 +73,15 @@ async function getShopCashfreeConfig(shopId) {
   }
 
   if (!shop.cashfree_app_id) {
-    throw new Error("Cashfree App ID is not configured for this shop.");
+    throw new Error(
+      "Cashfree App ID is not configured for this shop."
+    );
   }
 
   if (!shop.cashfree_secret_key) {
-    throw new Error("Cashfree Secret Key is not configured for this shop.");
+    throw new Error(
+      "Cashfree Secret Key is not configured for this shop."
+    );
   }
 
   // ==========================================
@@ -85,10 +89,14 @@ async function getShopCashfreeConfig(shopId) {
   // Environment comes from shops.cashfree_env
   // ==========================================
 
-  const environment = String(shop.cashfree_env || "SANDBOX").toUpperCase();
+  const environment = String(
+    shop.cashfree_env || "SANDBOX"
+  ).toUpperCase();
 
   if (!["SANDBOX", "PRODUCTION"].includes(environment)) {
-    throw new Error("Invalid Cashfree environment. Use SANDBOX or PRODUCTION.");
+    throw new Error(
+      "Invalid Cashfree environment. Use SANDBOX or PRODUCTION."
+    );
   }
 
   const apiUrl =
@@ -150,14 +158,21 @@ app.post("/api/payment/create", async (req, res) => {
     // GET SHOP CASHFREE CONFIG
     // --------------------------------------
 
-    const { shop, environment, apiUrl, headers } =
-      await getShopCashfreeConfig(shopId);
+    const {
+      shop,
+      environment,
+      apiUrl,
+      headers,
+    } = await getShopCashfreeConfig(shopId);
 
     // --------------------------------------
     // CREATE LOCAL PRINT ORDER FIRST
     // --------------------------------------
 
-    const { data: printOrder, error: orderError } = await supabase
+    const {
+      data: printOrder,
+      error: orderError,
+    } = await supabase
       .from("print_orders")
       .insert({
         shop_id: shopId,
@@ -186,7 +201,9 @@ app.post("/api/payment/create", async (req, res) => {
       .single();
 
     if (orderError) {
-      throw new Error(`Failed to create print order: ${orderError.message}`);
+      throw new Error(
+        `Failed to create print order: ${orderError.message}`
+      );
     }
 
     const orderId = printOrder.order_id;
@@ -195,7 +212,8 @@ app.post("/api/payment/create", async (req, res) => {
     // CASHFREE ORDER ID
     // --------------------------------------
 
-    const cashfreeOrderId = `Q2P_${shopId}_${orderId.replace(/-/g, "")}`;
+    const cashfreeOrderId =
+      `Q2P_${shopId}_${orderId.replace(/-/g, "")}`;
 
     // --------------------------------------
     // CASHFREE PAYLOAD
@@ -211,14 +229,16 @@ app.post("/api/payment/create", async (req, res) => {
       customer_details: {
         customer_id: `CUST_${shopId}_${Date.now()}`,
 
-        customer_phone: customerPhone || shop.whatsapp_number,
+        customer_phone:
+          customerPhone || shop.whatsapp_number,
 
-        customer_name: customerName || "Quick2Print Customer",
+        customer_name:
+          customerName || "Quick2Print Customer",
       },
 
       order_meta: {
         return_url:
-          `https://www.yourdomain.com/payment-status.html` +
+          `https://www.quick2print.in/payment-status.html` +
           `?order_id=${encodeURIComponent(orderId)}` +
           `&shop_id=${encodeURIComponent(shopId)}`,
       },
@@ -233,21 +253,30 @@ app.post("/api/payment/create", async (req, res) => {
     console.log("Environment:", environment);
     console.log("Amount:", amount);
 
-    const cfResponse = await axios.post(`${apiUrl}/orders`, payload, {
-      headers,
-    });
+    const cfResponse = await axios.post(
+      `${apiUrl}/orders`,
+      payload,
+      {
+        headers,
+      }
+    );
 
-    const paymentSessionId = cfResponse.data?.payment_session_id;
+    const paymentSessionId =
+      cfResponse.data?.payment_session_id;
 
     if (!paymentSessionId) {
-      throw new Error("Cashfree did not return payment_session_id.");
+      throw new Error(
+        "Cashfree did not return payment_session_id."
+      );
     }
 
     // --------------------------------------
     // UPDATE PRINT ORDER
     // --------------------------------------
 
-    const { error: updateError } = await supabase
+    const {
+      error: updateError,
+    } = await supabase
       .from("print_orders")
       .update({
         payment_order_id: cashfreeOrderId,
@@ -263,9 +292,14 @@ app.post("/api/payment/create", async (req, res) => {
       .eq("order_id", orderId);
 
     if (updateError) {
-      console.error("Print order update error:", updateError);
+      console.error(
+        "Print order update error:",
+        updateError
+      );
 
-      throw new Error("Payment created but database update failed.");
+      throw new Error(
+        "Payment created but database update failed."
+      );
     }
 
     // --------------------------------------
@@ -294,7 +328,7 @@ app.post("/api/payment/create", async (req, res) => {
   } catch (error) {
     console.error(
       "Create Payment Error:",
-      error.response?.data || error.message,
+      error.response?.data || error.message
     );
 
     return res.status(500).json({
@@ -314,7 +348,10 @@ app.post("/api/payment/create", async (req, res) => {
 
 app.post("/api/payment/verify", async (req, res) => {
   try {
-    const { orderId, shopId } = req.body;
+    const {
+      orderId,
+      shopId,
+    } = req.body;
 
     // --------------------------------------
     // VALIDATION
@@ -334,30 +371,36 @@ app.post("/api/payment/verify", async (req, res) => {
       });
     }
 
-    console.log(`Verifying order: ${orderId}`);
+    console.log(
+      `Verifying order: ${orderId}`
+    );
 
     // --------------------------------------
     // GET SHOP CASHFREE CONFIG
     // --------------------------------------
 
-    const { apiUrl, headers, environment } =
-      await getShopCashfreeConfig(shopId);
+    const {
+      apiUrl,
+      headers,
+      environment,
+    } = await getShopCashfreeConfig(shopId);
 
     // --------------------------------------
     // GET LOCAL PRINT ORDER
     // --------------------------------------
 
-    const { data: localOrder, error: localOrderError } = await supabase
+    const {
+      data: localOrder,
+      error: localOrderError,
+    } = await supabase
       .from("print_orders")
-      .select(
-        `
+      .select(`
         order_id,
         shop_id,
         payment_order_id,
         payment_status,
         payment_amount
-      `,
-      )
+      `)
       .eq("order_id", orderId)
       .eq("shop_id", shopId)
       .single();
@@ -372,7 +415,8 @@ app.post("/api/payment/verify", async (req, res) => {
     if (!localOrder.payment_order_id) {
       return res.status(400).json({
         success: false,
-        message: "Cashfree payment order ID not found.",
+        message:
+          "Cashfree payment order ID not found.",
       });
     }
 
@@ -381,19 +425,24 @@ app.post("/api/payment/verify", async (req, res) => {
     // --------------------------------------
 
     const response = await axios.get(
-      `${apiUrl}/orders/${encodeURIComponent(localOrder.payment_order_id)}`,
+      `${apiUrl}/orders/${encodeURIComponent(
+        localOrder.payment_order_id
+      )}`,
       {
         headers,
-      },
+      }
     );
 
     const cashfreeOrder = response.data;
 
     const cashfreeStatus = String(
-      cashfreeOrder?.order_status || "",
+      cashfreeOrder?.order_status || ""
     ).toUpperCase();
 
-    console.log("Cashfree status:", cashfreeStatus);
+    console.log(
+      "Cashfree status:",
+      cashfreeStatus
+    );
 
     // --------------------------------------
     // GET PAYMENT DETAILS
@@ -404,14 +453,16 @@ app.post("/api/payment/verify", async (req, res) => {
     try {
       const paymentResponse = await axios.get(
         `${apiUrl}/orders/${encodeURIComponent(
-          localOrder.payment_order_id,
+          localOrder.payment_order_id
         )}/payments`,
         {
           headers,
-        },
+        }
       );
 
-      const payments = Array.isArray(paymentResponse.data)
+      const payments = Array.isArray(
+        paymentResponse.data
+      )
         ? paymentResponse.data
         : [];
 
@@ -424,13 +475,17 @@ app.post("/api/payment/verify", async (req, res) => {
         paymentData =
           payments.find(
             (payment) =>
-              String(payment.payment_status || "").toUpperCase() === "SUCCESS",
-          ) || payments[payments.length - 1];
+              String(
+                payment.payment_status || ""
+              ).toUpperCase() === "SUCCESS"
+          ) ||
+          payments[payments.length - 1];
       }
     } catch (paymentError) {
       console.warn(
         "Could not fetch payment details:",
-        paymentError.response?.data || paymentError.message,
+        paymentError.response?.data ||
+          paymentError.message
       );
     }
 
@@ -442,9 +497,13 @@ app.post("/api/payment/verify", async (req, res) => {
 
     if (cashfreeStatus === "PAID") {
       dbStatus = "PAID";
-    } else if (cashfreeStatus === "EXPIRED") {
+    } else if (
+      cashfreeStatus === "EXPIRED"
+    ) {
       dbStatus = "EXPIRED";
-    } else if (cashfreeStatus === "FAILED") {
+    } else if (
+      cashfreeStatus === "FAILED"
+    ) {
       dbStatus = "FAILED";
     }
 
@@ -452,15 +511,20 @@ app.post("/api/payment/verify", async (req, res) => {
     // PAYMENT INFORMATION
     // --------------------------------------
 
-    const cfPaymentId = paymentData?.cf_payment_id
-      ? String(paymentData.cf_payment_id)
-      : null;
+    const cfPaymentId =
+      paymentData?.cf_payment_id
+        ? String(paymentData.cf_payment_id)
+        : null;
 
-    const paymentMethod = paymentData?.payment_method
-      ? typeof paymentData.payment_method === "string"
-        ? paymentData.payment_method
-        : JSON.stringify(paymentData.payment_method)
-      : null;
+    const paymentMethod =
+      paymentData?.payment_method
+        ? typeof paymentData.payment_method ===
+          "string"
+          ? paymentData.payment_method
+          : JSON.stringify(
+              paymentData.payment_method
+            )
+        : null;
 
     const transactionReference =
       paymentData?.bank_reference ||
@@ -496,7 +560,8 @@ app.post("/api/payment/verify", async (req, res) => {
     }
 
     if (dbStatus === "EXPIRED") {
-      paymentErrorMessage = "Payment order expired.";
+      paymentErrorMessage =
+        "Payment order expired.";
     }
 
     // --------------------------------------
@@ -506,38 +571,47 @@ app.post("/api/payment/verify", async (req, res) => {
     const updateData = {
       payment_status: dbStatus,
 
-      payment_verified_at: new Date().toISOString(),
+      payment_verified_at:
+        new Date().toISOString(),
     };
 
     if (cfPaymentId) {
-      updateData.cf_payment_id = cfPaymentId;
+      updateData.cf_payment_id =
+        cfPaymentId;
     }
 
     if (paymentMethod) {
-      updateData.payment_method = paymentMethod;
+      updateData.payment_method =
+        paymentMethod;
     }
 
     if (transactionReference) {
-      updateData.transaction_reference = String(transactionReference);
+      updateData.transaction_reference =
+        String(transactionReference);
     }
 
     if (paymentCompletedAt) {
-      updateData.payment_completed_at = paymentCompletedAt;
+      updateData.payment_completed_at =
+        paymentCompletedAt;
     }
 
     if (paymentErrorMessage) {
-      updateData.payment_error_message = String(paymentErrorMessage);
+      updateData.payment_error_message =
+        String(paymentErrorMessage);
     } else if (dbStatus === "PAID") {
-      updateData.payment_error_message = null;
+      updateData.payment_error_message =
+        null;
     }
 
-    const { data: updatedOrder, error: updateError } = await supabase
+    const {
+      data: updatedOrder,
+      error: updateError,
+    } = await supabase
       .from("print_orders")
       .update(updateData)
       .eq("order_id", orderId)
       .eq("shop_id", shopId)
-      .select(
-        `
+      .select(`
         order_id,
         shop_id,
         payment_order_id,
@@ -551,14 +625,18 @@ app.post("/api/payment/verify", async (req, res) => {
         payment_verified_at,
         transaction_reference,
         payment_error_message
-      `,
-      )
+      `)
       .single();
 
     if (updateError) {
-      console.error("Supabase Verify Update Error:", updateError);
+      console.error(
+        "Supabase Verify Update Error:",
+        updateError
+      );
 
-      throw new Error("Failed to update payment information.");
+      throw new Error(
+        "Failed to update payment information."
+      );
     }
 
     // --------------------------------------
@@ -567,7 +645,9 @@ app.post("/api/payment/verify", async (req, res) => {
     // --------------------------------------
 
     if (dbStatus === "PAID") {
-      const { error: processingError } = await supabase
+      const {
+        error: processingError,
+      } = await supabase
         .from("print_orders")
         .update({
           status: "processing",
@@ -576,7 +656,10 @@ app.post("/api/payment/verify", async (req, res) => {
         .eq("shop_id", shopId);
 
       if (processingError) {
-        console.error("Failed to move order to processing:", processingError);
+        console.error(
+          "Failed to move order to processing:",
+          processingError
+        );
       }
     }
 
@@ -589,34 +672,43 @@ app.post("/api/payment/verify", async (req, res) => {
 
       order_id: orderId,
 
-      payment_order_id: localOrder.payment_order_id,
+      payment_order_id:
+        localOrder.payment_order_id,
 
       payment_status: dbStatus,
 
       cashfree_status: cashfreeStatus,
 
-      payment_session_id: updatedOrder.payment_session_id,
+      payment_session_id:
+        updatedOrder.payment_session_id,
 
-      cf_payment_id: updatedOrder.cf_payment_id,
+      cf_payment_id:
+        updatedOrder.cf_payment_id,
 
-      payment_amount: updatedOrder.payment_amount,
+      payment_amount:
+        updatedOrder.payment_amount,
 
-      payment_method: updatedOrder.payment_method,
+      payment_method:
+        updatedOrder.payment_method,
 
-      transaction_reference: updatedOrder.transaction_reference,
+      transaction_reference:
+        updatedOrder.transaction_reference,
 
-      payment_completed_at: updatedOrder.payment_completed_at,
+      payment_completed_at:
+        updatedOrder.payment_completed_at,
 
-      payment_verified_at: updatedOrder.payment_verified_at,
+      payment_verified_at:
+        updatedOrder.payment_verified_at,
 
-      payment_error_message: updatedOrder.payment_error_message,
+      payment_error_message:
+        updatedOrder.payment_error_message,
 
       environment: environment,
     });
   } catch (error) {
     console.error(
       "Verify Payment Error:",
-      error.response?.data || error.message,
+      error.response?.data || error.message
     );
 
     return res.status(500).json({
@@ -634,23 +726,27 @@ app.post("/api/payment/verify", async (req, res) => {
 // API 3: GET PAYMENT ORDER
 // ==========================================
 
-app.get("/api/payment/order/:orderId", async (req, res) => {
-  try {
-    const { orderId } = req.params;
+app.get(
+  "/api/payment/order/:orderId",
+  async (req, res) => {
+    try {
+      const { orderId } = req.params;
 
-    const { shopId } = req.query;
+      const { shopId } = req.query;
 
-    if (!shopId) {
-      return res.status(400).json({
-        success: false,
-        message: "shopId is required.",
-      });
-    }
+      if (!shopId) {
+        return res.status(400).json({
+          success: false,
+          message: "shopId is required.",
+        });
+      }
 
-    const { data, error } = await supabase
-      .from("print_orders")
-      .select(
-        `
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("print_orders")
+        .select(`
           order_id,
           shop_id,
           total_files,
@@ -671,32 +767,36 @@ app.get("/api/payment/order/:orderId", async (req, res) => {
           payment_verified_at,
           transaction_reference,
           payment_error_message
-        `,
-      )
-      .eq("order_id", orderId)
-      .eq("shop_id", shopId)
-      .single();
+        `)
+        .eq("order_id", orderId)
+        .eq("shop_id", shopId)
+        .single();
 
-    if (error || !data) {
-      return res.status(404).json({
+      if (error || !data) {
+        return res.status(404).json({
+          success: false,
+          message: "Payment order not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        order: data,
+      });
+    } catch (error) {
+      console.error(
+        "Get Payment Order Error:",
+        error.message
+      );
+
+      return res.status(500).json({
         success: false,
-        message: "Payment order not found.",
+        message:
+          "Failed to get payment order.",
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      order: data,
-    });
-  } catch (error) {
-    console.error("Get Payment Order Error:", error.message);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to get payment order.",
-    });
   }
-});
+);
 
 // ==========================================
 // API 4: HEALTH CHECK
@@ -705,7 +805,8 @@ app.get("/api/payment/order/:orderId", async (req, res) => {
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Quick2Print Payment Server is running.",
+    message:
+      "Quick2Print Payment Server is running.",
     time: new Date().toISOString(),
   });
 });
@@ -717,5 +818,7 @@ app.get("/api/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Quick2Print Payment Server running on port ${PORT}`);
+  console.log(
+    `Quick2Print Payment Server running on port ${PORT}`
+  );
 });
