@@ -13,11 +13,13 @@ const app = express();
 
 const cors = require("cors");
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use(express.json());
 
 // ==========================================
@@ -175,8 +177,6 @@ app.post("/api/payment/create", async (req, res) => {
         payment_amount: amount,
 
         payment_currency: "INR",
-
-        payment_environment: environment,
       })
       .select("order_id")
       .single();
@@ -250,8 +250,6 @@ app.post("/api/payment/create", async (req, res) => {
         payment_amount: amount,
 
         payment_currency: "INR",
-
-        payment_environment: environment,
       })
       .eq("order_id", orderId);
 
@@ -502,8 +500,6 @@ app.post("/api/payment/verify", async (req, res) => {
       payment_status: dbStatus,
 
       payment_verified_at: new Date().toISOString(),
-
-      payment_environment: environment,
     };
 
     if (cfPaymentId) {
@@ -553,7 +549,7 @@ app.post("/api/payment/verify", async (req, res) => {
         payment_verified_at,
         transaction_reference,
         payment_error_message,
-        payment_environment
+        
       `,
       )
 
