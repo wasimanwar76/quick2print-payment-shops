@@ -63,6 +63,7 @@ async function getShopCashfreeConfig(shopId) {
       shop_name,
       status,
       print_price,
+      color_price,
       whatsapp_number,
       cashfree_app_id,
       cashfree_secret_key,
@@ -229,12 +230,18 @@ app.post("/api/payment/create", async (req, res) => {
     // Never trust the amount sent by the browser.
     // --------------------------------------
 
-    const pricePerPage = Number(shop.print_price);
+    const priceColumn = colorType === "Color" ? "color_price" : "print_price";
+
+    const pricePerPage = Number(shop[priceColumn]);
 
     if (!Number.isFinite(pricePerPage) || pricePerPage <= 0) {
       return res.status(400).json({
         success: false,
-        message: "This shop has not set a print price.",
+        code: "PRICE_NOT_CONFIGURED",
+        message:
+          colorType === "Color"
+            ? "This shop has not set a color print price."
+            : "This shop has not set a black print price.",
       });
     }
 
